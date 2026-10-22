@@ -10,6 +10,12 @@
 | **智能写作** | 独立写作子图（9 节点 / 3 处循环），需求澄清与人工审阅两处 `interrupt`，经 `Command(resume)` 从 PostgreSQL checkpoint 恢复 |
 | **多轮对话** | LangMem 短期摘要 + PostgreSQL checkpointer 按 thread 持久化；跨会话长期记忆按用户隔离 |
 
+### 界面预览
+
+![聊天界面](docs/chat-ui.png)
+
+> 同一会话内两轮连续对话，流式输出、上下文连续；截图为本地实际运行效果。
+
 **技术栈**：Vue 3 · TypeScript · FastAPI · LangGraph · LangMem · FastMCP(MCP) · LlamaIndex · ChromaDB · BM25 · bge-m3 · PostgreSQL · Redis · Docker Compose
 
 **30 秒启动**（Windows，需 Docker Desktop、uv、Node 18+）：

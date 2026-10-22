@@ -80,12 +80,38 @@ def get_model_messages(state: GraphState) -> list:
     - 更适合多轮长对话
 
     如果摘要节点暂时没有提供输出，则退回原始 messages。
+
+    注意：`load_long_term_memory` 通过 ``add_messages`` 追加 SystemMessage，
+    它会排在最新 HumanMessage 之后。多数 OpenAI 兼容模型会把「最后一条消息」
+    当作当前指令，于是把记忆文本（其中包含上一轮问答）当成用户输入，表现为
+    同一会话第二轮「答非所问」（复现：模型回复"你可能发送了一个空消息"）。
+    因此这里把排在最新人类消息之后的 SystemMessage 移到它前面，保证人类消息
+    始终是最后一条。
     """
     summarized_messages = state.get("summarized_messages")
-    print("summarized_messages:", summarized_messages)
     if summarized_messages:
-        return list(summarized_messages)
-    return list(state.get("messages", []))
+        base = list(summarized_messages)
+    else:
+        base = list(state.get("messages", []))
+
+    last_human_index = -1
+    for index, message in enumerate(base):
+        if isinstance(message, HumanMessage):
+            last_human_index = index
+    if last_human_index == -1 or last_human_index == len(base) - 1:
+        return base
+
+    tail = base[last_human_index + 1:]
+    system_tail = [m for m in tail if isinstance(m, SystemMessage)]
+    if not system_tail:
+        return base
+    rest_tail = [m for m in tail if not isinstance(m, SystemMessage)]
+    return (
+        base[:last_human_index]
+        + system_tail
+        + [base[last_human_index]]
+        + rest_tail
+    )
 
 
 def is_writing_request(query: str) -> bool:
