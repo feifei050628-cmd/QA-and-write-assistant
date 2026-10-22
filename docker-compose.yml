@@ -1,0 +1,53 @@
+# Tuling-Ai 本地依赖：PostgreSQL（LangGraph checkpoint + 用户/会话库）+ Redis（RAG docstore/index/cache）
+# 用法：
+#   docker compose up -d      启动
+#   docker compose ps         查看状态
+#   docker compose logs -f    看日志
+#   docker compose down       停止（保留数据卷）
+#   docker compose down -v    停止并清空数据（谨慎）
+name: tuling-ai
+
+services:
+  postgres:
+    # 复用本机已有镜像，避免额外下载
+    image: postgres:alpine
+    container_name: tuling-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "123456"
+      POSTGRES_DB: langgraph_agents
+      TZ: Asia/Shanghai
+      PGTZ: Asia/Shanghai
+    ports:
+      - "5432:5432"
+    volumes:
+      # PostgreSQL 18+ 镜像要求挂载父目录，数据会落在 /var/lib/postgresql/18/docker
+      - tuling_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d langgraph_agents"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: tuling-redis
+    restart: unless-stopped
+    # appendonly 保证重启后文档索引/缓存不丢
+    command: ["redis-server", "--appendonly", "yes"]
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+      - "6379:6379"
+    volumes:
+      - tuling_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  tuling_pgdata:
+  tuling_redisdata:
