@@ -2,6 +2,33 @@
 
 一个基于 RAG（检索增强生成）和多智能体编排的企业级 AI 助手系统，支持知识库问答、智能写作和普通对话三大核心功能。
 
+## 项目速览
+
+| 核心能力 | 实现要点 |
+| --- | --- |
+| **知识库问答** | PDF / TXT / Markdown 摄取 → 双管道分块（Markdown 结构与纯文本分开处理）→ Chroma 向量 + BM25 混合检索 → 重排 → 带来源片段的回答 |
+| **智能写作** | 独立写作子图（9 节点 / 3 处循环），需求澄清与人工审阅两处 `interrupt`，经 `Command(resume)` 从 PostgreSQL checkpoint 恢复 |
+| **多轮对话** | LangMem 短期摘要 + PostgreSQL checkpointer 按 thread 持久化；跨会话长期记忆按用户隔离 |
+
+**技术栈**：Vue 3 · TypeScript · FastAPI · LangGraph · LangMem · FastMCP(MCP) · LlamaIndex · ChromaDB · BM25 · bge-m3 · PostgreSQL · Redis · Docker Compose
+
+**30 秒启动**（Windows，需 Docker Desktop、uv、Node 18+）：
+
+```powershell
+copy .env.example .env     # 填入 DASHSCOPE_API_KEY 与 PostgreSQL 连接串
+powershell -ExecutionPolicy Bypass -File .\start-all.ps1
+```
+
+启动后访问 http://localhost:5174，默认账号 `root` / `admin123`。
+
+**建议从这几个文件开始读**：
+
+- `langgraph_service/app/services/graph_runtime.py` —— PostgreSQL checkpointer + store 注入，长期记忆边界节点
+- `langgraph_service/my_agent/writing_subgraph/` —— 中断与恢复、父子图状态映射
+- `main_service/app/routers/custom_chat.py` —— 网关只做鉴权与 SSE 透明转发
+- `rag_api_service/core/ingestion.py` —— 双摄取管道与按内容幂等更新
+- `部署说明.md` —— 本机部署踩到的 8 个真实工程问题与修复（Windows 事件循环、GBK 编码中断 SSE、低内存降级重排等）
+
 ## 系统架构
 
 ```
